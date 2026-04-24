@@ -181,34 +181,18 @@ const FMMVisualizer = () => {
           );
         }
       }
-      
-      for (let x = 0; x < 4; x++) {
-        for (let y = 0; y < 4; y++) {
-          const c2 = getCenter(2, x, y);
-          const c1 = getCenter(1, Math.floor(x/2), Math.floor(y/2));
-          lines.push(
-            <motion.line
-              key={`m2m-21-${x}-${y}`}
-              x1={c2.cx} y1={c2.cy} x2={c1.cx} y2={c1.cy}
-              stroke="var(--color-m2m)" strokeWidth="1.5"
-              initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
-              transition={{ duration: 1, delay: 1 }}
-            />
-          );
-        }
-      }
     }
 
-    for (let level = 1; level <= 3; level++) {
+    for (let level = 2; level <= 3; level++) {
       const numCells = Math.pow(2, level);
       for (let x = 0; x < numCells; x++) {
         for (let y = 0; y < numCells; y++) {
           const c = getCenter(level, x, y);
-          const delay = stepName === 'M2M' ? (level === 2 ? 1.0 : level === 1 ? 2.0 : 0) : 0;
+          const delay = stepName === 'M2M' ? (level === 2 ? 1.0 : 0) : 0;
           lines.push(
             <motion.circle 
               key={`m-${level}-${x}-${y}`} 
-              cx={c.cx} cy={c.cy} r={level === 1 ? 6 : level === 2 ? 4 : 2} 
+              cx={c.cx} cy={c.cy} r={level === 2 ? 4 : 2} 
               fill="var(--color-multipole)"
               initial={stepName === 'M2M' && level < 3 ? { scale: 0, opacity: 0 } : false}
               animate={{ scale: 1, opacity: 1 }}
@@ -279,26 +263,6 @@ const FMMVisualizer = () => {
     const lines = [];
     
     if (stepName === 'L2L') {
-      for (let x = 0; x < 2; x++) {
-        for (let y = 0; y < 2; y++) {
-          const pCenter = getCenter(1, x, y);
-          for (let dx = 0; dx < 2; dx++) {
-            for (let dy = 0; dy < 2; dy++) {
-              const cCenter = getCenter(2, x * 2 + dx, y * 2 + dy);
-              lines.push(
-                <motion.line
-                  key={`l2l-12-${x}-${y}-${dx}-${dy}`}
-                  x1={pCenter.cx} y1={pCenter.cy} x2={cCenter.cx} y2={cCenter.cy}
-                  stroke="var(--color-l2l)" strokeWidth="2"
-                  initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
-                  transition={{ duration: 1 }}
-                />
-              );
-            }
-          }
-        }
-      }
-
       for (let x = 0; x < 4; x++) {
         for (let y = 0; y < 4; y++) {
           const pCenter = getCenter(2, x, y);
@@ -311,7 +275,7 @@ const FMMVisualizer = () => {
                   x1={pCenter.cx} y1={pCenter.cy} x2={cCenter.cx} y2={cCenter.cy}
                   stroke="var(--color-l2l)" strokeWidth="1" strokeDasharray="4 4"
                   initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
-                  transition={{ duration: 1, delay: 1 }}
+                  transition={{ duration: 1 }}
                 />
               );
             }
@@ -321,12 +285,12 @@ const FMMVisualizer = () => {
     }
 
     // Always draw local centers in L2L and L2P
-    for (let level = 1; level <= 3; level++) {
+    for (let level = 2; level <= 3; level++) {
       const numCells = Math.pow(2, level);
       for (let x = 0; x < numCells; x++) {
         for (let y = 0; y < numCells; y++) {
           const c = getCenter(level, x, y);
-          lines.push(<circle key={`l2lc-${level}-${x}-${y}`} cx={c.cx} cy={c.cy} r={level === 1 ? 6 : level === 2 ? 4 : 2} fill="var(--color-local)" />);
+          lines.push(<circle key={`l2lc-${level}-${x}-${y}`} cx={c.cx} cy={c.cy} r={level === 2 ? 4 : 2} fill="var(--color-local)" />);
         }
       }
     }
