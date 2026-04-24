@@ -53,15 +53,15 @@ const FMMVisualizer = () => {
     for (let level = 0; level <= MAX_LEVEL; level++) {
       const numCells = Math.pow(2, level);
       const cellSize = SIZE / numCells;
-      const opacity = level === 0 ? 0 : level === 1 ? 0.3 : level === 2 ? 0.15 : 0.05;
+      const strokeColor = `var(--grid-line-level${level})`;
       
       for (let i = 1; i < numCells; i++) {
         const pos = i * cellSize;
         lines.push(
-          <line key={`v-${level}-${i}`} x1={pos} y1={0} x2={pos} y2={SIZE} stroke={`rgba(255,255,255,${opacity})`} strokeWidth={level === 1 ? 2 : 1} />
+          <line key={`v-${level}-${i}`} x1={pos} y1={0} x2={pos} y2={SIZE} stroke={strokeColor} strokeWidth={level === 1 ? 2 : 1} />
         );
         lines.push(
-          <line key={`h-${level}-${i}`} x1={0} y1={pos} x2={SIZE} y2={pos} stroke={`rgba(255,255,255,${opacity})`} strokeWidth={level === 1 ? 2 : 1} />
+          <line key={`h-${level}-${i}`} x1={0} y1={pos} x2={SIZE} y2={pos} stroke={strokeColor} strokeWidth={level === 1 ? 2 : 1} />
         );
       }
     }
@@ -188,7 +188,7 @@ const FMMVisualizer = () => {
           y={targetCellM2L.y * targetCenter.size}
           width={targetCenter.size}
           height={targetCenter.size}
-          fill="rgba(168, 85, 247, 0.2)"
+          fill="var(--target-bg)"
           stroke="var(--color-local)"
           strokeWidth="2"
         />
@@ -203,7 +203,7 @@ const FMMVisualizer = () => {
               y={cell.y * c.size}
               width={c.size}
               height={c.size}
-              fill="rgba(234, 179, 8, 0.1)"
+              fill="var(--interaction-bg)"
               stroke="var(--color-interaction)"
               strokeWidth="1"
             />
@@ -337,7 +337,7 @@ const FMMVisualizer = () => {
           ))}
         </div>
 
-        <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
+        <div style={{ background: 'var(--info-box-bg)', padding: '1rem', borderRadius: '4px', border: '1px solid var(--info-box-border)' }}>
           <h3 style={{ fontSize: '1.1rem', color: 'var(--accent-color)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Info size={18} /> {stepName}
           </h3>
