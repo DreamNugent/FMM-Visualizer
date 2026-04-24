@@ -113,6 +113,8 @@ const FMMVisualizer = () => {
   const interactionList = useMemo(() => getInteractionList(targetCellM2L.level, targetCellM2L.x, targetCellM2L.y), [targetCellM2L]);
 
   const drawSegments = () => {
+    if (stepName === 'M2M' || stepName === 'M2L' || stepName === 'L2L') return null;
+    
     return segments.map((s, i) => (
       <g key={`s-${i}`}>
         {/* Draw the dislocation segment line */}
