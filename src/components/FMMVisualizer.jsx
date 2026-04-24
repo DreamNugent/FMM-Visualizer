@@ -21,7 +21,13 @@ const STEPS = ['INIT', 'P2M', 'M2M', 'M2L', 'L2L', 'L2P'];
 const FMMVisualizer = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [segments, setSegments] = useState([]);
+  const [m2lLevel, setM2lLevel] = useState(2);
   const [targetCellM2L, setTargetCellM2L] = useState({ level: 2, x: 1, y: 1 });
+
+  const handleM2LLevelChange = (newLevel) => {
+    setM2lLevel(newLevel);
+    setTargetCellM2L({ level: newLevel, x: 1, y: 1 });
+  };
 
   // Initialize dislocation segments
   const initSegments = () => {
@@ -364,16 +370,16 @@ const FMMVisualizer = () => {
         </svg>
 
         {stepName === 'M2L' && (
-          <div style={{ position: 'absolute', top: 0, left: 0, width: SIZE, height: SIZE, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gridTemplateRows: 'repeat(4, 1fr)' }}>
-            {Array.from({ length: 16 }).map((_, i) => {
-              const x = i % 4;
-              const y = Math.floor(i / 4);
+          <div style={{ position: 'absolute', top: 0, left: 0, width: SIZE, height: SIZE, display: 'grid', gridTemplateColumns: `repeat(${Math.pow(2, m2lLevel)}, 1fr)`, gridTemplateRows: `repeat(${Math.pow(2, m2lLevel)}, 1fr)` }}>
+            {Array.from({ length: Math.pow(4, m2lLevel) }).map((_, i) => {
+              const x = i % Math.pow(2, m2lLevel);
+              const y = Math.floor(i / Math.pow(2, m2lLevel));
               return (
                 <div 
-                  key={`click-area-${i}`} 
+                  key={`click-area-${m2lLevel}-${i}`} 
                   style={{ cursor: 'pointer', border: '1px solid transparent' }}
-                  onClick={() => setTargetCellM2L({ level: 2, x, y })}
-                  onMouseEnter={() => setTargetCellM2L({ level: 2, x, y })}
+                  onClick={() => setTargetCellM2L({ level: m2lLevel, x, y })}
+                  onMouseEnter={() => setTargetCellM2L({ level: m2lLevel, x, y })}
                 />
               );
             })}
@@ -397,14 +403,32 @@ const FMMVisualizer = () => {
           <h3 style={{ fontSize: '1.1rem', color: 'var(--accent-color)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Info size={18} /> {stepName}
           </h3>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: stepName === 'M2L' ? '1rem' : '0' }}>
             {stepName === 'INIT' && 'Initial distribution of Dislocation Segments in the 8x8 (Level 3) quadtree grid. Segments are assigned to cells based on their midpoints.'}
             {stepName === 'P2M' && 'Segment to Multipole (P2M): Dislocation segments in Level 3 cells are expanded into multipoles at their cell centers.'}
             {stepName === 'M2M' && 'Multipole to Multipole (M2M): Multipole expansions are translated from Level 3 to Level 2, and Level 2 to Level 1 parent cells.'}
-            {stepName === 'M2L' && 'Multipole to Local (M2L): For well-separated cells (Interaction List), multipoles are converted to local expansions. Hover over Level 2 cells to explore.'}
+            {stepName === 'M2L' && 'Multipole to Local (M2L): For well-separated cells (Interaction List), multipoles are converted to local expansions. Hover over cells to explore.'}
             {stepName === 'L2L' && 'Local to Local (L2L): Local expansions are translated from parent cells down to child cells (Level 1 -> 2 -> 3).'}
             {stepName === 'L2P' && 'Local to Segment (L2P): Local expansions at Level 3 leaf cells are evaluated at the midpoints of the Dislocation Segments to compute the long-range forces.'}
           </p>
+          {stepName === 'M2L' && (
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+              <button 
+                className={`btn ${m2lLevel === 2 ? 'active' : ''}`} 
+                onClick={() => handleM2LLevelChange(2)} 
+                style={{ flex: 1, padding: '0.5rem', fontSize: '0.85rem' }}
+              >
+                Level 2 M2L
+              </button>
+              <button 
+                className={`btn ${m2lLevel === 3 ? 'active' : ''}`} 
+                onClick={() => handleM2LLevelChange(3)} 
+                style={{ flex: 1, padding: '0.5rem', fontSize: '0.85rem' }}
+              >
+                Level 3 M2L
+              </button>
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
