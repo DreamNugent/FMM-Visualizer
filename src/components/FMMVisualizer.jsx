@@ -193,13 +193,21 @@ const FMMVisualizer = () => {
       }
     }
 
-    for (let level = 2; level <= 3; level++) {
+    for (let level = 1; level <= 3; level++) {
       const numCells = Math.pow(2, level);
       for (let x = 0; x < numCells; x++) {
         for (let y = 0; y < numCells; y++) {
           const c = getCenter(level, x, y);
+          const delay = stepName === 'M2M' ? (level === 2 ? 1.0 : level === 1 ? 2.0 : 0) : 0;
           lines.push(
-            <circle key={`m-${level}-${x}-${y}`} cx={c.cx} cy={c.cy} r={level === 2 ? 4 : 2} fill="var(--color-multipole)" />
+            <motion.circle 
+              key={`m-${level}-${x}-${y}`} 
+              cx={c.cx} cy={c.cy} r={level === 1 ? 6 : level === 2 ? 4 : 2} 
+              fill="var(--color-multipole)"
+              initial={stepName === 'M2M' && level < 3 ? { scale: 0, opacity: 0 } : false}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5, delay: delay }}
+            />
           );
         }
       }
