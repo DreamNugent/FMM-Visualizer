@@ -4,7 +4,7 @@ import { Play, RotateCcw, ChevronRight, Info } from 'lucide-react';
 
 const SIZE = 640;
 const MAX_LEVEL = 3;
-const NUM_PARTICLES = 100;
+const NUM_SEGMENTS = 70;
 
 // Helper to get center of a cell
 const getCenter = (level, x, y) => {
@@ -16,33 +16,46 @@ const getCenter = (level, x, y) => {
   };
 };
 
-const STEPS = ['INIT', 'P2M', 'M2M', 'M2L', 'L2L'];
+const STEPS = ['INIT', 'P2M', 'M2M', 'M2L', 'L2L', 'L2P'];
 
 const FMMVisualizer = () => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [particles, setParticles] = useState([]);
+  const [segments, setSegments] = useState([]);
   const [targetCellM2L, setTargetCellM2L] = useState({ level: 2, x: 1, y: 1 });
-  const [targetCellL2L, setTargetCellL2L] = useState(null);
 
-  // Initialize particles
-  const initParticles = () => {
-    const newParticles = Array.from({ length: NUM_PARTICLES }).map(() => {
-      const px = Math.random() * SIZE;
-      const py = Math.random() * SIZE;
+  // Initialize dislocation segments
+  const initSegments = () => {
+    const newSegments = Array.from({ length: NUM_SEGMENTS }).map(() => {
+      // Random center point for the segment
+      const midX = Math.random() * (SIZE - 20) + 10;
+      const midY = Math.random() * (SIZE - 20) + 10;
+      
+      // Random length and angle
+      const length = Math.random() * 15 + 10; // 10 to 25 length
+      const angle = Math.random() * Math.PI * 2;
+      
+      const dx = (length / 2) * Math.cos(angle);
+      const dy = (length / 2) * Math.sin(angle);
+      
       const cellSize = SIZE / 8;
+      
       return {
-        x: px,
-        y: py,
-        cellX: Math.floor(px / cellSize),
-        cellY: Math.floor(py / cellSize),
+        x1: midX - dx,
+        y1: midY - dy,
+        x2: midX + dx,
+        y2: midY + dy,
+        midX: midX,
+        midY: midY,
+        cellX: Math.floor(midX / cellSize),
+        cellY: Math.floor(midY / cellSize),
       };
     });
-    setParticles(newParticles);
+    setSegments(newSegments);
     setCurrentStep(0);
   };
 
   useEffect(() => {
-    initParticles();
+    initSegments();
   }, []);
 
   const stepName = STEPS[currentStep];
@@ -70,19 +83,16 @@ const FMMVisualizer = () => {
 
   // Interaction List Logic for M2L
   const getInteractionList = (level, tx, ty) => {
-    if (level < 2) return []; // M2L usually starts from level 2
+    if (level < 2) return [];
     const parentX = Math.floor(tx / 2);
     const parentY = Math.floor(ty / 2);
     const list = [];
     
-    // Parent's neighbors
     for (let px = parentX - 1; px <= parentX + 1; px++) {
       for (let py = parentY - 1; py <= parentY + 1; py++) {
         if (px >= 0 && px < Math.pow(2, level - 1) && py >= 0 && py < Math.pow(2, level - 1)) {
-          // Children of parent's neighbors
           for (let cx = px * 2; cx <= px * 2 + 1; cx++) {
             for (let cy = py * 2; cy <= py * 2 + 1; cy++) {
-              // Not neighbor of target
               if (Math.abs(cx - tx) > 1 || Math.abs(cy - ty) > 1) {
                 list.push({ x: cx, y: cy });
               }
@@ -96,24 +106,29 @@ const FMMVisualizer = () => {
 
   const interactionList = useMemo(() => getInteractionList(targetCellM2L.level, targetCellM2L.x, targetCellM2L.y), [targetCellM2L]);
 
-  const drawParticles = () => {
-    return particles.map((p, i) => (
-      <circle key={`p-${i}`} cx={p.x} cy={p.y} r={2} fill="var(--color-particle)" opacity={0.8} />
+  const drawSegments = () => {
+    return segments.map((s, i) => (
+      <g key={`s-${i}`}>
+        {/* Draw the dislocation segment line */}
+        <line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke="var(--color-particle)" strokeWidth="2" />
+        {/* Draw the midpoint slightly to emphasize DDD center-of-mass/evaluation point */}
+        <circle cx={s.midX} cy={s.midY} r={1.5} fill="var(--color-particle)" />
+      </g>
     ));
   };
 
   const drawP2M = () => {
     if (stepName !== 'P2M') return null;
-    return particles.map((p, i) => {
-      const center = getCenter(3, p.cellX, p.cellY);
+    return segments.map((s, i) => {
+      const center = getCenter(3, s.cellX, s.cellY);
       return (
         <motion.line
           key={`p2m-${i}`}
-          x1={p.x} y1={p.y} x2={center.cx} y2={center.cy}
+          x1={s.midX} y1={s.midY} x2={center.cx} y2={center.cy}
           stroke="var(--color-multipole)"
           strokeWidth="0.5"
           initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ pathLength: 1, opacity: 0.3 }}
+          animate={{ pathLength: 1, opacity: 0.5 }}
           transition={{ duration: 1.5, ease: "easeInOut" }}
         />
       );
@@ -121,10 +136,9 @@ const FMMVisualizer = () => {
   };
 
   const drawM2M = () => {
-    if (stepName !== 'M2M' && stepName !== 'M2L' && stepName !== 'L2L') return null;
+    if (stepName !== 'M2M' && stepName !== 'M2L' && stepName !== 'L2L' && stepName !== 'L2P') return null;
     const lines = [];
     
-    // Draw Level 3 multipoles (dots)
     if (stepName === 'M2M') {
       for (let x = 0; x < 8; x++) {
         for (let y = 0; y < 8; y++) {
@@ -142,7 +156,6 @@ const FMMVisualizer = () => {
         }
       }
       
-      // Level 2 to Level 1
       for (let x = 0; x < 4; x++) {
         for (let y = 0; y < 4; y++) {
           const c2 = getCenter(2, x, y);
@@ -160,7 +173,6 @@ const FMMVisualizer = () => {
       }
     }
 
-    // Always show Multipole centers for visualization
     for (let level = 2; level <= 3; level++) {
       const numCells = Math.pow(2, level);
       for (let x = 0; x < numCells; x++) {
@@ -182,7 +194,6 @@ const FMMVisualizer = () => {
     
     return (
       <>
-        {/* Highlight Target Cell */}
         <rect
           x={targetCellM2L.x * targetCenter.size}
           y={targetCellM2L.y * targetCenter.size}
@@ -193,7 +204,6 @@ const FMMVisualizer = () => {
           strokeWidth="2"
         />
         
-        {/* Highlight Interaction List Cells */}
         {interactionList.map((cell, i) => {
           const c = getCenter(targetCellM2L.level, cell.x, cell.y);
           return (
@@ -210,7 +220,6 @@ const FMMVisualizer = () => {
           );
         })}
 
-        {/* Draw M2L Translation arrows */}
         {interactionList.map((cell, i) => {
           const sourceCenter = getCenter(targetCellM2L.level, cell.x, cell.y);
           return (
@@ -232,55 +241,81 @@ const FMMVisualizer = () => {
   };
 
   const drawL2L = () => {
-    if (stepName !== 'L2L') return null;
+    if (stepName !== 'L2L' && stepName !== 'L2P') return null;
     const lines = [];
     
-    // Level 1 to Level 2
-    for (let x = 0; x < 2; x++) {
-      for (let y = 0; y < 2; y++) {
-        const pCenter = getCenter(1, x, y);
-        for (let dx = 0; dx < 2; dx++) {
-          for (let dy = 0; dy < 2; dy++) {
-            const cCenter = getCenter(2, x * 2 + dx, y * 2 + dy);
-            lines.push(
-              <motion.line
-                key={`l2l-12-${x}-${y}-${dx}-${dy}`}
-                x1={pCenter.cx} y1={pCenter.cy} x2={cCenter.cx} y2={cCenter.cy}
-                stroke="var(--color-l2l)" strokeWidth="2"
-                initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
-                transition={{ duration: 1 }}
-              />
-            );
-            lines.push(<circle key={`l2lc-2-${x * 2 + dx}-${y * 2 + dy}`} cx={cCenter.cx} cy={cCenter.cy} r={4} fill="var(--color-local)" />);
+    if (stepName === 'L2L') {
+      for (let x = 0; x < 2; x++) {
+        for (let y = 0; y < 2; y++) {
+          const pCenter = getCenter(1, x, y);
+          for (let dx = 0; dx < 2; dx++) {
+            for (let dy = 0; dy < 2; dy++) {
+              const cCenter = getCenter(2, x * 2 + dx, y * 2 + dy);
+              lines.push(
+                <motion.line
+                  key={`l2l-12-${x}-${y}-${dx}-${dy}`}
+                  x1={pCenter.cx} y1={pCenter.cy} x2={cCenter.cx} y2={cCenter.cy}
+                  stroke="var(--color-l2l)" strokeWidth="2"
+                  initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
+                  transition={{ duration: 1 }}
+                />
+              );
+            }
           }
         }
-        lines.push(<circle key={`l2lp-1-${x}-${y}`} cx={pCenter.cx} cy={pCenter.cy} r={6} fill="var(--color-local)" />);
+      }
+
+      for (let x = 0; x < 4; x++) {
+        for (let y = 0; y < 4; y++) {
+          const pCenter = getCenter(2, x, y);
+          for (let dx = 0; dx < 2; dx++) {
+            for (let dy = 0; dy < 2; dy++) {
+              const cCenter = getCenter(3, x * 2 + dx, y * 2 + dy);
+              lines.push(
+                <motion.line
+                  key={`l2l-23-${x}-${y}-${dx}-${dy}`}
+                  x1={pCenter.cx} y1={pCenter.cy} x2={cCenter.cx} y2={cCenter.cy}
+                  stroke="var(--color-l2l)" strokeWidth="1" strokeDasharray="4 4"
+                  initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
+                  transition={{ duration: 1, delay: 1 }}
+                />
+              );
+            }
+          }
+        }
       }
     }
 
-    // Level 2 to Level 3
-    for (let x = 0; x < 4; x++) {
-      for (let y = 0; y < 4; y++) {
-        const pCenter = getCenter(2, x, y);
-        for (let dx = 0; dx < 2; dx++) {
-          for (let dy = 0; dy < 2; dy++) {
-            const cCenter = getCenter(3, x * 2 + dx, y * 2 + dy);
-            lines.push(
-              <motion.line
-                key={`l2l-23-${x}-${y}-${dx}-${dy}`}
-                x1={pCenter.cx} y1={pCenter.cy} x2={cCenter.cx} y2={cCenter.cy}
-                stroke="var(--color-l2l)" strokeWidth="1" strokeDasharray="4 4"
-                initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
-                transition={{ duration: 1, delay: 1 }}
-              />
-            );
-            lines.push(<circle key={`l2lc-3-${x * 2 + dx}-${y * 2 + dy}`} cx={cCenter.cx} cy={cCenter.cy} r={2} fill="var(--color-local)" />);
-          }
+    // Always draw local centers in L2L and L2P
+    for (let level = 1; level <= 3; level++) {
+      const numCells = Math.pow(2, level);
+      for (let x = 0; x < numCells; x++) {
+        for (let y = 0; y < numCells; y++) {
+          const c = getCenter(level, x, y);
+          lines.push(<circle key={`l2lc-${level}-${x}-${y}`} cx={c.cx} cy={c.cy} r={level === 1 ? 6 : level === 2 ? 4 : 2} fill="var(--color-local)" />);
         }
       }
     }
 
     return lines;
+  };
+
+  const drawL2P = () => {
+    if (stepName !== 'L2P') return null;
+    return segments.map((s, i) => {
+      const center = getCenter(3, s.cellX, s.cellY);
+      return (
+        <motion.line
+          key={`l2p-${i}`}
+          x1={center.cx} y1={center.cy} x2={s.midX} y2={s.midY}
+          stroke="var(--color-local)"
+          strokeWidth="0.5"
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: 1, opacity: 0.8 }}
+          transition={{ duration: 1.5, ease: "easeInOut" }}
+        />
+      );
+    });
   };
 
   const nextStep = () => {
@@ -289,23 +324,17 @@ const FMMVisualizer = () => {
 
   return (
     <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
-      {/* Visualizer Domain */}
       <div className="glass-panel" style={{ width: SIZE, height: SIZE, position: 'relative' }}>
         <svg width={SIZE} height={SIZE} style={{ position: 'absolute', top: 0, left: 0 }}>
-          {/* Base Grid */}
           {renderGrid()}
-          
-          {/* Particles */}
-          {drawParticles()}
-
-          {/* FMM Steps */}
+          {drawSegments()}
           {drawP2M()}
           {drawM2M()}
           {drawM2L()}
           {drawL2L()}
+          {drawL2P()}
         </svg>
 
-        {/* Interaction layer for M2L */}
         {stepName === 'M2L' && (
           <div style={{ position: 'absolute', top: 0, left: 0, width: SIZE, height: SIZE, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gridTemplateRows: 'repeat(4, 1fr)' }}>
             {Array.from({ length: 16 }).map((_, i) => {
@@ -324,14 +353,13 @@ const FMMVisualizer = () => {
         )}
       </div>
 
-      {/* Control Panel */}
       <div className="glass-panel" style={{ width: '320px', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>FMM Visualization</h2>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>FMM for DDD</h2>
         
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap' }}>
           {STEPS.map((step, idx) => (
-            <div key={step} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-              <div className={`step-dot ${idx <= currentStep ? 'active' : ''}`} />
+            <div key={step} style={{ display: 'flex', alignItems: 'center', flex: idx === STEPS.length - 1 ? 0 : 1 }}>
+              <div className={`step-dot ${idx <= currentStep ? 'active' : ''}`} title={step} />
               {idx < STEPS.length - 1 && <div className="step-line" style={{ background: idx < currentStep ? 'var(--accent-color)' : '' }} />}
             </div>
           ))}
@@ -342,11 +370,12 @@ const FMMVisualizer = () => {
             <Info size={18} /> {stepName}
           </h3>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-            {stepName === 'INIT' && 'Initial distribution of particles in the 8x8 (Level 3) quadtree grid.'}
-            {stepName === 'P2M' && 'Particle to Multipole (P2M): Particles in Level 3 cells form multipole expansions at their cell centers.'}
+            {stepName === 'INIT' && 'Initial distribution of Dislocation Segments in the 8x8 (Level 3) quadtree grid. Segments are assigned to cells based on their midpoints.'}
+            {stepName === 'P2M' && 'Segment to Multipole (P2M): Dislocation segments in Level 3 cells are expanded into multipoles at their cell centers.'}
             {stepName === 'M2M' && 'Multipole to Multipole (M2M): Multipole expansions are translated from Level 3 to Level 2, and Level 2 to Level 1 parent cells.'}
-            {stepName === 'M2L' && 'Multipole to Local (M2L): For well-separated cells (Interaction List), multipoles are converted to local expansions. Hover/Click Level 2 cells to see their interaction lists!'}
+            {stepName === 'M2L' && 'Multipole to Local (M2L): For well-separated cells (Interaction List), multipoles are converted to local expansions. Hover over Level 2 cells to explore.'}
             {stepName === 'L2L' && 'Local to Local (L2L): Local expansions are translated from parent cells down to child cells (Level 1 -> 2 -> 3).'}
+            {stepName === 'L2P' && 'Local to Segment (L2P): Local expansions at Level 3 leaf cells are evaluated at the midpoints of the Dislocation Segments to compute the long-range forces.'}
           </p>
         </div>
 
@@ -354,7 +383,7 @@ const FMMVisualizer = () => {
           <button className="btn active" onClick={nextStep}>
             <ChevronRight size={18} /> Next Step
           </button>
-          <button className="btn" onClick={initParticles}>
+          <button className="btn" onClick={initSegments}>
             <RotateCcw size={18} /> Reset & Randomize
           </button>
         </div>
