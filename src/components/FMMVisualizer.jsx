@@ -16,6 +16,18 @@ const getCenter = (level, x, y) => {
   };
 };
 
+// Helper to shorten line so arrows don't overlap at the center
+const shortenLine = (x1, y1, x2, y2, padding) => {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len <= padding) return { x: x1, y: y1 };
+  return {
+    x: x2 - (dx / len) * padding,
+    y: y2 - (dy / len) * padding
+  };
+};
+
 const STEPS = ['INIT', 'P2M', 'M2M', 'M2L', 'L2L', 'L2P'];
 
 const FMMVisualizer = () => {
@@ -130,12 +142,14 @@ const FMMVisualizer = () => {
     
     const lines = segments.map((s, i) => {
       const center = getCenter(3, s.cellX, s.cellY);
+      const end = shortenLine(s.midX, s.midY, center.cx, center.cy, 12);
       return (
         <motion.line
           key={`p2m-${i}`}
-          x1={s.midX} y1={s.midY} x2={center.cx} y2={center.cy}
+          x1={s.midX} y1={s.midY} x2={end.x} y2={end.y}
           stroke="var(--color-multipole)"
           strokeWidth="0.5"
+          markerEnd="url(#arrow-p2m)"
           initial={{ pathLength: 0, opacity: 0 }}
           animate={{ pathLength: 1, opacity: 0.5 }}
           transition={{ duration: 1.5, ease: "easeInOut" }}
@@ -172,11 +186,13 @@ const FMMVisualizer = () => {
         for (let y = 0; y < 8; y++) {
           const c3 = getCenter(3, x, y);
           const c2 = getCenter(2, Math.floor(x/2), Math.floor(y/2));
+          const end = shortenLine(c3.cx, c3.cy, c2.cx, c2.cy, 12);
           lines.push(
             <motion.line
               key={`m2m-32-${x}-${y}`}
-              x1={c3.cx} y1={c3.cy} x2={c2.cx} y2={c2.cy}
+              x1={c3.cx} y1={c3.cy} x2={end.x} y2={end.y}
               stroke="var(--color-m2m)" strokeWidth="1"
+              markerEnd="url(#arrow-m2m)"
               initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
               transition={{ duration: 1 }}
             />
@@ -242,12 +258,14 @@ const FMMVisualizer = () => {
 
         {interactionList.map((cell, i) => {
           const sourceCenter = getCenter(targetCellM2L.level, cell.x, cell.y);
+          const end = shortenLine(sourceCenter.cx, sourceCenter.cy, targetCenter.cx, targetCenter.cy, 16);
           return (
             <motion.line
               key={`m2l-${i}`}
               x1={sourceCenter.cx} y1={sourceCenter.cy}
-              x2={targetCenter.cx} y2={targetCenter.cy}
+              x2={end.x} y2={end.y}
               stroke="var(--color-m2l)" strokeWidth="2"
+              markerEnd="url(#arrow-m2l)"
               initial={{ pathLength: 0, opacity: 0 }}
               animate={{ pathLength: 1, opacity: 0.8 }}
               transition={{ duration: 1.5, delay: i * 0.05 }}
@@ -271,11 +289,13 @@ const FMMVisualizer = () => {
           for (let dx = 0; dx < 2; dx++) {
             for (let dy = 0; dy < 2; dy++) {
               const cCenter = getCenter(3, x * 2 + dx, y * 2 + dy);
+              const end = shortenLine(pCenter.cx, pCenter.cy, cCenter.cx, cCenter.cy, 12);
               lines.push(
                 <motion.line
                   key={`l2l-23-${x}-${y}-${dx}-${dy}`}
-                  x1={pCenter.cx} y1={pCenter.cy} x2={cCenter.cx} y2={cCenter.cy}
-                  stroke="var(--color-l2l)" strokeWidth="1" strokeDasharray="4 4"
+                  x1={pCenter.cx} y1={pCenter.cy} x2={end.x} y2={end.y}
+                  stroke="var(--color-l2l)" strokeWidth="1"
+                  markerEnd="url(#arrow-l2l)"
                   initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
                   transition={{ duration: 1 }}
                 />
@@ -304,12 +324,14 @@ const FMMVisualizer = () => {
     if (stepName !== 'L2P') return null;
     return segments.map((s, i) => {
       const center = getCenter(3, s.cellX, s.cellY);
+      const end = shortenLine(center.cx, center.cy, s.midX, s.midY, 8);
       return (
         <motion.line
           key={`l2p-${i}`}
-          x1={center.cx} y1={center.cy} x2={s.midX} y2={s.midY}
+          x1={center.cx} y1={center.cy} x2={end.x} y2={end.y}
           stroke="var(--color-local)"
           strokeWidth="0.5"
+          markerEnd="url(#arrow-l2p)"
           initial={{ pathLength: 0, opacity: 0 }}
           animate={{ pathLength: 1, opacity: 0.8 }}
           transition={{ duration: 1.5, ease: "easeInOut" }}
@@ -326,6 +348,23 @@ const FMMVisualizer = () => {
     <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
       <div className="glass-panel" style={{ width: SIZE, height: SIZE, position: 'relative' }}>
         <svg width={SIZE} height={SIZE} style={{ position: 'absolute', top: 0, left: 0 }}>
+          <defs>
+            <marker id="arrow-p2m" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-multipole)" />
+            </marker>
+            <marker id="arrow-m2m" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-m2m)" />
+            </marker>
+            <marker id="arrow-m2l" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-m2l)" />
+            </marker>
+            <marker id="arrow-l2l" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-l2l)" />
+            </marker>
+            <marker id="arrow-l2p" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-local)" />
+            </marker>
+          </defs>
           {renderGrid()}
           {drawSegments()}
           {drawP2M()}
