@@ -119,7 +119,8 @@ const FMMVisualizer = () => {
 
   const drawP2M = () => {
     if (stepName !== 'P2M') return null;
-    return segments.map((s, i) => {
+    
+    const lines = segments.map((s, i) => {
       const center = getCenter(3, s.cellX, s.cellY);
       return (
         <motion.line
@@ -133,6 +134,25 @@ const FMMVisualizer = () => {
         />
       );
     });
+
+    const centers = [];
+    for (let x = 0; x < 8; x++) {
+      for (let y = 0; y < 8; y++) {
+        const c = getCenter(3, x, y);
+        centers.push(
+          <motion.circle 
+            key={`p2m-c-${x}-${y}`} 
+            cx={c.cx} cy={c.cy} r={2} 
+            fill="var(--color-multipole)" 
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 1.2 }}
+          />
+        );
+      }
+    }
+
+    return [...lines, ...centers];
   };
 
   const drawM2M = () => {
